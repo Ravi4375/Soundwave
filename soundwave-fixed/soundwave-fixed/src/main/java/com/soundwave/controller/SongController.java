@@ -4,9 +4,11 @@ import com.soundwave.model.Song;
 import com.soundwave.repository.SongRepository;
 import com.soundwave.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -36,13 +38,32 @@ public class SongController {
 
     @GetMapping("/{id}/radio")
     public ResponseEntity<List<Song>> songRadio(@PathVariable Long id,
-                                                  @RequestParam(defaultValue = "20") int limit) {
+                                                @RequestParam(defaultValue = "20") int limit) {
         return ResponseEntity.ok(recommendationService.getSongRadio(id, limit));
     }
 
     @GetMapping("/genre/{genre}")
     public ResponseEntity<List<Song>> byGenre(@PathVariable String genre) {
         return ResponseEntity.ok(songRepository.findByGenre(genre));
+    }
+
+    @GetMapping("/{id}/stream")
+    public ResponseEntity<Void> streamSong(@PathVariable Long id) {
+        return songRepository.findById(id)
+                .map(song -> {
+                    String audioUrl = song.getAudioUrl();
+                    if (audioUrl == null || audioUrl.isBlank()) {
+                        return ResponseEntity.notFound().<Void>build();
+                    }
+                    try {
+                        return ResponseEntity.status(HttpStatus.FOUND)
+                                .location(URI.create(audioUrl))
+                                .build();
+                    } catch (IllegalArgumentException ex) {
+                        return ResponseEntity.unprocessableEntity().<Void>build();
+                    }
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/play")

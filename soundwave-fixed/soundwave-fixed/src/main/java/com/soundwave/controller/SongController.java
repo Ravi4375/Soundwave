@@ -47,10 +47,12 @@ public class SongController {
 
     @PostMapping("/{id}/play")
     public ResponseEntity<Void> recordPlay(@PathVariable Long id) {
-        songRepository.findById(id).ifPresent(song -> {
-            song.setPlayCount((song.getPlayCount() == null ? 0L : song.getPlayCount()) + 1);
-            songRepository.save(song);
-        });
-        return ResponseEntity.ok().build();
+        return songRepository.findById(id)
+                .map(song -> {
+                    song.setPlayCount((song.getPlayCount() == null ? 0L : song.getPlayCount()) + 1);
+                    songRepository.save(song);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }
